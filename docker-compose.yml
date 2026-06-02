@@ -377,7 +377,7 @@ services:
   #     ${AI_STACK_SUPABASE_AUTH_DATA_PATH}
   # ============================================================
   supabase-auth:
-    image: supabase/gotrue:latest
+    image: supabase/gotrue:v2.132.3
     container_name: ai-stack-supabase-auth
     restart: unless-stopped
     networks:
