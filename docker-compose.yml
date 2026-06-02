@@ -52,40 +52,10 @@ services:
     environment:
       # Base URL for your Classic RAG API
       OPENWEBUI_RAG_API_BASE_URL: ${AI_STACK_CLASSIC_RAG_API_URL}
+      OPENAI_API_BASE_URL: ${AI_STACK_LOCALAI_URL}
+      OPENAI_API_KEY: ${AI_STACK_LOCALAI_API_KEY}
     volumes:
       - ${AI_STACK_OPENWEBUI_DATA_PATH}:/app/backend/data
-
-  # ============================================================
-  # LM Studio
-  # ------------------------------------------------------------
-  # High-performance local model server.
-  #
-  # Purpose:
-  # - Primary LLM runtime for your ai-stack
-  # - Exposes an OpenAI-compatible API
-  # - Used by OpenWebUI, Classic RAG API, GraphRAG API
-  #
-  # Networking:
-  # - Exposed on frontend for direct testing
-  # - Also connected to backend for internal service access
-  #
-  # Storage:
-  # - Model files and runtime data stored under
-  #   ${AI_STACK_LMSTUDIO_DATA_PATH}
-  # ============================================================
-  lmstudio:
-    image: lmstudio/server:latest
-    container_name: ai-stack-lmstudio
-    restart: unless-stopped
-    networks:
-      backend: {}
-      frontend:
-        ipv4_address: ${AI_STACK_LMSTUDIO_IP}
-        mac_address: ${AI_STACK_LMSTUDIO_MAC}
-    ports:
-      - "${AI_STACK_LMSTUDIO_PORT}:1234"
-    volumes:
-      - ${AI_STACK_LMSTUDIO_DATA_PATH}:/data
 
   # ============================================================
   # LocalAI
@@ -113,7 +83,11 @@ services:
     ports:
       - "${AI_STACK_LOCALAI_PORT}:8080"
     environment:
-      LOCALAI_MODELS_PATH: /models
+      LOCALAI_MODELS_PATH=${AI_STACK_LOCALAI_MODELS_PATH}
+      LOCALAI_THREADS=${AI_STACK_LOCALAI_THREADS}
+      LOCALAI_CONTEXT_SIZE=${AI_STACK_LOCALAI_CONTEXT_SIZE}
+      LOCALAI_DEFAULT_MODEL=${AI_STACK_LOCALAI_DEFAULT_MODEL}
+      LOCALAI_LOAD_MODELS_ON_STARTUP=${AI_STACK_LOCALAI_LOAD_MODELS_ON_STARTUP}
     volumes:
       - ${AI_STACK_LOCALAI_MODELS_PATH}:/models
 
@@ -149,6 +123,8 @@ services:
     environment:
       FLOWISE_USERNAME: ${AI_STACK_FLOWISE_USERNAME}
       FLOWISE_PASSWORD: ${AI_STACK_FLOWISE_PASSWORD}
+      OPENAI_API_BASE_URL: ${AI_STACK_LOCALAI_URL}
+      OPENAI_API_KEY: ${AI_STACK_LOCALAI_API_KEY}
     volumes:
       - ${AI_STACK_FLOWISE_DATA_PATH}:/root/.flowise
 
@@ -186,6 +162,8 @@ services:
       N8N_HOST: ${AI_STACK_N8N_HOST}
       N8N_PORT: 5678
       N8N_PROTOCOL: http
+      N8N_OPENAI_API_BASE_URL: ${AI_STACK_LOCALAI_URL}
+      N8N_OPENAI_API_KEY: ${AI_STACK_LOCALAI_API_KEY}
     volumes:
       - ${AI_STACK_N8N_DATA_PATH}:/home/node/.n8n
 
@@ -554,7 +532,7 @@ services:
     ports:
       - "${AI_STACK_CLASSIC_RAG_API_PORT}:8000"
     environment:
-      RAG_LLM_BASE_URL: ${AI_STACK_LMSTUDIO_URL}
+      RAG_LLM_BASE_URL: ${AI_STACK_LOCALAI_URL}
       RAG_QDRANT_URL: ${AI_STACK_QDRANT_URL}
       LANGFUSE_PUBLIC_KEY: ${AI_STACK_LANGFUSE_PUBLIC_KEY}
       LANGFUSE_SECRET_KEY: ${AI_STACK_LANGFUSE_SECRET_KEY}
@@ -595,7 +573,7 @@ services:
     ports:
       - "${AI_STACK_GRAPHRAG_API_PORT}:8001"
     environment:
-      GRAPHRAG_LLM_BASE_URL: ${AI_STACK_LMSTUDIO_URL}
+      GRAPHRAG_LLM_BASE_URL: ${AI_STACK_LOCALAI_URL}
       GRAPHRAG_NEO4J_URI: ${AI_STACK_NEO4J_URI}
       GRAPHRAG_NEO4J_USERNAME: neo4j
       GRAPHRAG_NEO4J_PASSWORD: ${AI_STACK_NEO4J_PASSWORD}
