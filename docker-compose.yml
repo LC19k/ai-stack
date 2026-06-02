@@ -308,37 +308,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
-  # ============================================================
-  # Supabase — Kong Gateway
-  # ------------------------------------------------------------
-  # API gateway that fronts all Supabase services.
-  #
-  # Purpose:
-  # - Routes traffic to REST, Auth, Realtime, Storage
-  # - Provides a unified API endpoint
-  #
-  # Networking:
-  # - Backend-only
-  #
-  # Storage:
-  # - Declarative config stored under:
-  #     ${AI_STACK_SUPABASE_KONG_DATA_PATH}
-  # ============================================================
-  supabase-kong:
-    image: supabase/kong:latest
-    container_name: ai-stack-supabase-kong
-    restart: unless-stopped
-    networks:
-      backend: {}
-    depends_on:
-      - supabase-postgres
-    environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
-    volumes:
-      - ${AI_STACK_SUPABASE_KONG_DATA_PATH}:/var/lib/kong
-  
+ 
   # ============================================================
   # Supabase — Auth (GoTrue)
   # ------------------------------------------------------------
@@ -497,7 +467,9 @@ services:
       - supabase-storage
       - supabase-realtime
     environment:
-      SUPABASE_URL: ${AI_STACK_SUPABASE_KONG_URL}
+      SUPABASE_URL: http://supabase-rest:3000
+      # Could also be:
+      # SUPABASE_URL: http://supabase-auth:9999
       SUPABASE_ANON_KEY: ${AI_STACK_SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${AI_STACK_SUPABASE_SERVICE_ROLE_KEY}
     volumes:
