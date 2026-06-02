@@ -359,7 +359,7 @@ services:
       KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
     volumes:
       - ${AI_STACK_SUPABASE_KONG_DATA_PATH}:/var/lib/kong
-
+  
   # ============================================================
   # Supabase — Auth (GoTrue)
   # ------------------------------------------------------------
