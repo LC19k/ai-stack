@@ -1,182 +1,638 @@
+# ============================================================
+# ai-stack
+# ------------------------------------------------------------
+# Self-hosted AI platform providing:
+# - Chat UI (OpenWebUI)
+# - Local model runtimes (LM Studio, LocalAI)
+# - Workflow automation (Flowise, n8n)
+# - Observability (Langfuse)
+# - Databases (Qdrant, Neo4j, Supabase)
+# - Custom RAG APIs (Classic RAG + GraphRAG)
+#
+# Networks:
+# - backend: default network for all internal services
+# - frontend: only for GUI-facing services with static IPs
+#
+# All IPs, MACs, ports, paths, URLs, and credentials are
+# fully env-parameterized for reproducibility and portability.
+# ============================================================
+
 services:
+  # Services will be defined in subsequent sections.
+  # This header ensures consistent structure and readability.
+  # ============================================================
+  # OpenWebUI
+  # ------------------------------------------------------------
+  # Primary chat UI for your entire AI platform.
+  #
+  # Purpose:
+  # - Human-facing interface for interacting with LLMs
+  # - Connects to LM Studio, LocalAI, and your RAG APIs
+  # - Supports multi-user, multi-model workflows
+  #
+  # Networking:
+  # - Exposed on the frontend network with a static IP
+  # - Also connected to backend for internal API access
+  #
+  # Storage:
+  # - All user data, settings, and chat history stored under
+  #   ${AI_STACK_OPENWEBUI_DATA_PATH}
+  # ============================================================
   openwebui:
     image: ghcr.io/open-webui/open-webui:latest
     container_name: ai-stack-openwebui
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
       frontend:
-        ipv4_address: ${AI_STACK_OPENWEBUI_FRONTEND_IP}
-        mac_address: ${AI_STACK_OPENWEBUI_FRONTEND_MAC}
+        ipv4_address: ${AI_STACK_OPENWEBUI_IP}
+        mac_address: ${AI_STACK_OPENWEBUI_MAC}
     ports:
       - "${AI_STACK_OPENWEBUI_PORT}:8080"
+    environment:
+      # Base URL for your Classic RAG API
+      OPENWEBUI_RAG_API_BASE_URL: ${AI_STACK_CLASSIC_RAG_API_URL}
     volumes:
-      - /mnt/user/appdata/ai-stack/openwebui:/app/backend/data
-      - /mnt/user/appdata/ai-stack/openwebui-models:/app/models
+      - ${AI_STACK_OPENWEBUI_DATA_PATH}:/app/backend/data
 
+  # ============================================================
+  # LM Studio
+  # ------------------------------------------------------------
+  # High-performance local model server.
+  #
+  # Purpose:
+  # - Primary LLM runtime for your ai-stack
+  # - Exposes an OpenAI-compatible API
+  # - Used by OpenWebUI, Classic RAG API, GraphRAG API
+  #
+  # Networking:
+  # - Exposed on frontend for direct testing
+  # - Also connected to backend for internal service access
+  #
+  # Storage:
+  # - Model files and runtime data stored under
+  #   ${AI_STACK_LMSTUDIO_DATA_PATH}
+  # ============================================================
   lmstudio:
     image: lmstudio/server:latest
     container_name: ai-stack-lmstudio
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
       frontend:
-        ipv4_address: ${AI_STACK_LMSTUDIO_FRONTEND_IP}
-        mac_address: ${AI_STACK_LMSTUDIO_FRONTEND_MAC}
+        ipv4_address: ${AI_STACK_LMSTUDIO_IP}
+        mac_address: ${AI_STACK_LMSTUDIO_MAC}
     ports:
       - "${AI_STACK_LMSTUDIO_PORT}:1234"
     volumes:
-      - /mnt/user/appdata/ai-stack/lmstudio/models:/models
-      - /mnt/user/appdata/ai-stack/lmstudio/config:/config
+      - ${AI_STACK_LMSTUDIO_DATA_PATH}:/data
 
+  # ============================================================
+  # LocalAI
+  # ------------------------------------------------------------
+  # Alternative local model runtime.
+  #
+  # Purpose:
+  # - Secondary LLM backend for experimentation
+  # - OpenAI-compatible API
+  # - Useful for fallback or model diversity
+  #
+  # Networking:
+  # - Backend-only (not exposed to LAN)
+  #
+  # Storage:
+  # - Model files stored under
+  #   ${AI_STACK_LOCALAI_MODELS_PATH}
+  # ============================================================
   localai:
     image: quay.io/go-skynet/local-ai:latest
     container_name: ai-stack-localai
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
     ports:
       - "${AI_STACK_LOCALAI_PORT}:8080"
+    environment:
+      LOCALAI_MODELS_PATH: /models
     volumes:
-      - /mnt/user/appdata/ai-stack/localai/models:/models
-      - /mnt/user/appdata/ai-stack/localai/config:/config
+      - ${AI_STACK_LOCALAI_MODELS_PATH}:/models
 
+  # ============================================================
+  # Flowise
+  # ------------------------------------------------------------
+  # Low-code orchestration UI for building LLM/RAG workflows.
+  #
+  # Purpose:
+  # - Visual builder for LLM pipelines
+  # - Chains tools, models, and your RAG APIs
+  # - Ideal for prototyping and debugging flows
+  #
+  # Networking:
+  # - Exposed on the frontend network with a static IP
+  # - Also connected to backend for internal API access
+  #
+  # Storage:
+  # - All flows, credentials, and config stored under:
+  #     ${AI_STACK_FLOWISE_DATA_PATH}
+  # ============================================================
   flowise:
     image: flowiseai/flowise:latest
     container_name: ai-stack-flowise
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
       frontend:
-        ipv4_address: ${AI_STACK_FLOWISE_FRONTEND_IP}
-        mac_address: ${AI_STACK_FLOWISE_FRONTEND_MAC}
+        ipv4_address: ${AI_STACK_FLOWISE_IP}
+        mac_address: ${AI_STACK_FLOWISE_MAC}
     ports:
       - "${AI_STACK_FLOWISE_PORT}:3000"
+    environment:
+      FLOWISE_USERNAME: ${AI_STACK_FLOWISE_USERNAME}
+      FLOWISE_PASSWORD: ${AI_STACK_FLOWISE_PASSWORD}
     volumes:
-      - /mnt/user/appdata/ai-stack/flowise:/root/.flowise
+      - ${AI_STACK_FLOWISE_DATA_PATH}:/root/.flowise
 
+  # ============================================================
+  # n8n
+  # ------------------------------------------------------------
+  # General-purpose automation and workflow engine.
+  #
+  # Purpose:
+  # - Ingestion pipelines (files, APIs, webhooks)
+  # - Scheduled jobs and background tasks
+  # - Integrations with external systems
+  # - Can push data into Qdrant, Supabase, Neo4j, etc.
+  #
+  # Networking:
+  # - Exposed on the frontend network with a static IP
+  # - Also connected to backend for internal service access
+  #
+  # Storage:
+  # - Workflows, credentials, and runtime data stored under:
+  #     ${AI_STACK_N8N_DATA_PATH}
+  # ============================================================
   n8n:
     image: n8nio/n8n:latest
     container_name: ai-stack-n8n
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
       frontend:
-        ipv4_address: ${AI_STACK_N8N_FRONTEND_IP}
-        mac_address: ${AI_STACK_N8N_FRONTEND_MAC}
+        ipv4_address: ${AI_STACK_N8N_IP}
+        mac_address: ${AI_STACK_N8N_MAC}
     ports:
       - "${AI_STACK_N8N_PORT}:5678"
     environment:
-      DB_TYPE: postgres
-      DB_POSTGRESDB_HOST: postgres-main
-      DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: n8n
-      DB_POSTGRESDB_USER: n8n
-      DB_POSTGRESDB_PASSWORD: ${AI_STACK_N8N_DB_PASSWORD}
-      QUEUE_BULL_REDIS_HOST: redis-main
-      QUEUE_BULL_REDIS_PORT: 6379
-      N8N_ENCRYPTION_KEY: ${AI_STACK_N8N_ENCRYPTION_KEY}
+      N8N_HOST: ${AI_STACK_N8N_HOST}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
     volumes:
-      - /mnt/user/appdata/ai-stack/n8n:/home/node/.n8n
+      - ${AI_STACK_N8N_DATA_PATH}:/home/node/.n8n
 
+  # ============================================================
+  # Langfuse
+  # ------------------------------------------------------------
+  # Observability and analytics for your entire AI platform.
+  #
+  # Purpose:
+  # - Centralized tracing for all LLM calls
+  # - Tracks spans, events, evaluations, and latency
+  # - Used by Classic RAG API, GraphRAG API, Flowise, n8n,
+  #   and any client configured with Langfuse keys
+  #
+  # Networking:
+  # - Exposed on the frontend network with a static IP
+  # - Also connected to backend for internal ingestion
+  #
+  # Storage:
+  # - Persistent data stored under:
+  #     ${AI_STACK_LANGFUSE_DATA_PATH}
+  #
+  # Notes:
+  # - LANGFUSE_DATABASE_URL points to your Postgres instance
+  #   (Supabase or standalone, depending on your architecture)
+  # ============================================================
   langfuse:
     image: langfuse/langfuse:latest
     container_name: ai-stack-langfuse
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
       frontend:
-        ipv4_address: ${AI_STACK_LANGFUSE_FRONTEND_IP}
-        mac_address: ${AI_STACK_LANGFUSE_FRONTEND_MAC}
+        ipv4_address: ${AI_STACK_LANGFUSE_IP}
+        mac_address: ${AI_STACK_LANGFUSE_MAC}
     ports:
       - "${AI_STACK_LANGFUSE_PORT}:3000"
     environment:
-      DATABASE_URL: postgres://langfuse:${AI_STACK_LANGFUSE_DB_PASSWORD}@postgres-main:5432/langfuse
+      LANGFUSE_DATABASE_URL: ${AI_STACK_LANGFUSE_DATABASE_URL}
+      LANGFUSE_SECRET_KEY: ${AI_STACK_LANGFUSE_SECRET_KEY}
+      LANGFUSE_PUBLIC_KEY: ${AI_STACK_LANGFUSE_PUBLIC_KEY}
       NEXTAUTH_SECRET: ${AI_STACK_LANGFUSE_NEXTAUTH_SECRET}
-      NEXTAUTH_URL: https://your-langfuse-domain/
+      NEXTAUTH_URL: ${AI_STACK_LANGFUSE_URL}
     volumes:
-      - /mnt/user/appdata/ai-stack/langfuse:/data
+      - ${AI_STACK_LANGFUSE_DATA_PATH}:/data
 
-  neo4j:
-    image: neo4j:5
-    container_name: ai-stack-neo4j
-    restart: unless-stopped
-    networks:
-      backend:
-      frontend:
-        ipv4_address: ${AI_STACK_NEO4J_FRONTEND_IP}
-        mac_address: ${AI_STACK_NEO4J_FRONTEND_MAC}
-    ports:
-      - "${AI_STACK_NEO4J_HTTP_PORT}:7474"
-      - "${AI_STACK_NEO4J_BOLT_PORT}:7687"
-    environment:
-      NEO4J_AUTH: neo4j/${AI_STACK_NEO4J_PASSWORD}
-    volumes:
-      - /mnt/user/appdata/ai-stack/neo4j/data:/data
-      - /mnt/user/appdata/ai-stack/neo4j/logs:/logs
-      - /mnt/user/appdata/ai-stack/neo4j/plugins:/plugins
-
+  # ============================================================
+  # Qdrant
+  # ------------------------------------------------------------
+  # Vector database for embeddings and similarity search.
+  #
+  # Purpose:
+  # - Primary vector store for Classic RAG
+  # - Optional hybrid store for GraphRAG
+  #
+  # Networking:
+  # - Backend-only (no direct LAN exposure)
+  #
+  # Storage:
+  # - Persistent vector index data stored under:
+  #     ${AI_STACK_QDRANT_DATA_PATH}
+  # ============================================================
   qdrant:
     image: qdrant/qdrant:latest
     container_name: ai-stack-qdrant
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
     ports:
       - "${AI_STACK_QDRANT_PORT}:6333"
     volumes:
-      - /mnt/user/appdata/ai-stack/qdrant:/qdrant/storage
+      - ${AI_STACK_QDRANT_DATA_PATH}:/qdrant/storage
 
-  supabase:
-    image: supabase/supabase-all-in-one:latest
-    container_name: ai-stack-supabase
+  # ============================================================
+  # Neo4j
+  # ------------------------------------------------------------
+  # Graph database for GraphRAG and knowledge graphs.
+  #
+  # Purpose:
+  # - Stores entities, relationships, and graph structures
+  # - Used by GraphRAG API for graph queries and reasoning
+  #
+  # Networking:
+  # - Exposed on frontend for Neo4j Browser access
+  # - Also on backend for GraphRAG API access
+  #
+  # Storage:
+  # - Graph data and logs stored under:
+  #     ${AI_STACK_NEO4J_DATA_PATH}
+  #     ${AI_STACK_NEO4J_LOGS_PATH}
+  # ============================================================
+  neo4j:
+    image: neo4j:5
+    container_name: ai-stack-neo4j
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
+      frontend:
+        ipv4_address: ${AI_STACK_NEO4J_IP}
+        mac_address: ${AI_STACK_NEO4J_MAC}
     ports:
-      - "${AI_STACK_SUPABASE_STUDIO_PORT}:54323"
+      - "${AI_STACK_NEO4J_HTTP_PORT}:7474"  # Browser
+      - "${AI_STACK_NEO4J_BOLT_PORT}:7687"  # Bolt
     environment:
-      SUPABASE_URL: http://supabase:8000
+      NEO4J_AUTH: neo4j/${AI_STACK_NEO4J_PASSWORD}
+    volumes:
+      - ${AI_STACK_NEO4J_DATA_PATH}:/data
+      - ${AI_STACK_NEO4J_LOGS_PATH}:/logs
+
+  # ============================================================
+  # Supabase — Postgres
+  # ------------------------------------------------------------
+  # Core database for the entire Supabase subsystem.
+  #
+  # Purpose:
+  # - Primary Postgres instance
+  # - Includes pgvector extension
+  # - Used by Auth, REST, Realtime, Storage, Studio
+  #
+  # Networking:
+  # - Backend-only (never exposed to LAN)
+  #
+  # Storage:
+  # - Persistent DB files stored under:
+  #     ${AI_STACK_SUPABASE_POSTGRES_DATA_PATH}
+  # ============================================================
+  supabase-postgres:
+    image: supabase/postgres:15.1.0.89
+    container_name: ai-stack-supabase-postgres
+    restart: unless-stopped
+    networks:
+      backend: {}
+    environment:
+      POSTGRES_PASSWORD: ${AI_STACK_SUPABASE_POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      POSTGRES_USER: supabase_admin
+    volumes:
+      - ${AI_STACK_SUPABASE_POSTGRES_DATA_PATH}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supabase_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ============================================================
+  # Supabase — Kong Gateway
+  # ------------------------------------------------------------
+  # API gateway that fronts all Supabase services.
+  #
+  # Purpose:
+  # - Routes traffic to REST, Auth, Realtime, Storage
+  # - Provides a unified API endpoint
+  #
+  # Networking:
+  # - Backend-only
+  #
+  # Storage:
+  # - Declarative config stored under:
+  #     ${AI_STACK_SUPABASE_KONG_DATA_PATH}
+  # ============================================================
+  supabase-kong:
+    image: supabase/kong:latest
+    container_name: ai-stack-supabase-kong
+    restart: unless-stopped
+    networks:
+      backend: {}
+    depends_on:
+      - supabase-postgres
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+    volumes:
+      - ${AI_STACK_SUPABASE_KONG_DATA_PATH}:/var/lib/kong
+
+  # ============================================================
+  # Supabase — Auth (GoTrue)
+  # ------------------------------------------------------------
+  # Authentication and user management.
+  #
+  # Purpose:
+  # - Handles sign-in, sign-up, JWT issuance
+  # - Backed by Postgres
+  #
+  # Networking:
+  # - Backend-only
+  #
+  # Storage:
+  # - Auth state stored under:
+  #     ${AI_STACK_SUPABASE_AUTH_DATA_PATH}
+  # ============================================================
+  supabase-auth:
+    image: supabase/gotrue:latest
+    container_name: ai-stack-supabase-auth
+    restart: unless-stopped
+    networks:
+      backend: {}
+    depends_on:
+      - supabase-postgres
+    environment:
+      GOTRUE_DB_DRIVER: postgres
+      DATABASE_URL: postgres://supabase_admin:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
+      GOTRUE_JWT_SECRET: ${AI_STACK_SUPABASE_JWT_SECRET}
+      GOTRUE_SITE_URL: ${AI_STACK_SUPABASE_SITE_URL}
+      GOTRUE_API_HOST: 0.0.0.0
+    volumes:
+      - ${AI_STACK_SUPABASE_AUTH_DATA_PATH}:/data
+
+  # ============================================================
+  # Supabase — REST (PostgREST)
+  # ------------------------------------------------------------
+  # Auto-generated REST API for Postgres.
+  #
+  # Purpose:
+  # - Exposes database tables as REST endpoints
+  # - Enforces RLS policies
+  #
+  # Networking:
+  # - Backend-only
+  # ============================================================
+  supabase-rest:
+    image: postgrest/postgrest:latest
+    container_name: ai-stack-supabase-rest
+    restart: unless-stopped
+    networks:
+      backend: {}
+    depends_on:
+      - supabase-postgres
+    environment:
+      PGRST_DB_URI: postgres://supabase_admin:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${AI_STACK_SUPABASE_JWT_SECRET}
+
+  # ============================================================
+  # Supabase — Realtime
+  # ------------------------------------------------------------
+  # WebSocket-based realtime change feeds.
+  #
+  # Purpose:
+  # - Emits row-level change events
+  # - Used for live dashboards, sync, notifications
+  #
+  # Networking:
+  # - Backend-only
+  #
+  # Storage:
+  # - Realtime metadata stored under:
+  #     ${AI_STACK_SUPABASE_REALTIME_DATA_PATH}
+  # ============================================================
+  supabase-realtime:
+    image: supabase/realtime:latest
+    container_name: ai-stack-supabase-realtime
+    restart: unless-stopped
+    networks:
+      backend: {}
+    depends_on:
+      - supabase-postgres
+    environment:
+      DB_HOST: supabase-postgres
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${AI_STACK_SUPABASE_POSTGRES_PASSWORD}
+    volumes:
+      - ${AI_STACK_SUPABASE_REALTIME_DATA_PATH}:/data
+
+  # ============================================================
+  # Supabase — Storage API
+  # ------------------------------------------------------------
+  # Object storage service.
+  #
+  # Purpose:
+  # - File uploads
+  # - Public/private buckets
+  #
+  # Networking:
+  # - Backend-only
+  #
+  # Storage:
+  # - File objects stored under:
+  #     ${AI_STACK_SUPABASE_STORAGE_DATA_PATH}
+  # ============================================================
+  supabase-storage:
+    image: supabase/storage-api:latest
+    container_name: ai-stack-supabase-storage
+    restart: unless-stopped
+    networks:
+      backend: {}
+    depends_on:
+      - supabase-postgres
+    environment:
+      ANON_KEY: ${AI_STACK_SUPABASE_ANON_KEY}
+      SERVICE_KEY: ${AI_STACK_SUPABASE_SERVICE_ROLE_KEY}
+      POSTGRES_PASSWORD: ${AI_STACK_SUPABASE_POSTGRES_PASSWORD}
+      DATABASE_URL: postgres://supabase_admin:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
+    volumes:
+      - ${AI_STACK_SUPABASE_STORAGE_DATA_PATH}:/var/lib/storage
+
+  # ============================================================
+  # Supabase — Studio
+  # ------------------------------------------------------------
+  # Web UI for managing your Supabase instance.
+  #
+  # Purpose:
+  # - Database browser
+  # - Auth management
+  # - Storage browser
+  # - API explorer
+  #
+  # Networking:
+  # - Exposed on frontend with static IP
+  # - Also on backend to reach internal services
+  #
+  # Storage:
+  # - Studio config stored under:
+  #     ${AI_STACK_SUPABASE_STUDIO_DATA_PATH}
+  # ============================================================
+  supabase-studio:
+    image: supabase/studio:latest
+    container_name: ai-stack-supabase-studio
+    restart: unless-stopped
+    networks:
+      backend: {}
+      frontend:
+        ipv4_address: ${AI_STACK_SUPABASE_STUDIO_IP}
+        mac_address: ${AI_STACK_SUPABASE_STUDIO_MAC}
+    ports:
+      - "${AI_STACK_SUPABASE_STUDIO_PORT}:3000"
+    depends_on:
+      - supabase-postgres
+      - supabase-auth
+      - supabase-rest
+      - supabase-storage
+      - supabase-realtime
+    environment:
+      SUPABASE_URL: ${AI_STACK_SUPABASE_KONG_URL}
       SUPABASE_ANON_KEY: ${AI_STACK_SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${AI_STACK_SUPABASE_SERVICE_ROLE_KEY}
-      POSTGRES_PASSWORD: ${AI_STACK_SUPABASE_POSTGRES_PASSWORD}
-      JWT_SECRET: ${AI_STACK_SUPABASE_JWT_SECRET}
     volumes:
-      - /mnt/user/appdata/ai-stack/supabase:/supabase
+      - ${AI_STACK_SUPABASE_STUDIO_DATA_PATH}:/data
 
+  # ============================================================
+  # Classic RAG API
+  # ------------------------------------------------------------
+  # Vector-based Retrieval-Augmented Generation service.
+  #
+  # Purpose:
+  # - Embedding generation
+  # - Vector search against Qdrant
+  # - Document ingestion and chunking
+  # - OpenAI-compatible inference via LM Studio or LocalAI
+  #
+  # Networking:
+  # - Backend-only (not exposed to LAN)
+  #
+  # Storage:
+  # - Ingestion pipelines, logs, and config stored under:
+  #     ${AI_STACK_CLASSIC_RAG_DATA_PATH}
+  # ============================================================
   classic-rag-api:
-    build: ./classic_rag_api
+    image: ghcr.io/your-org/classic-rag-api:latest
     container_name: ai-stack-classic-rag-api
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
     ports:
-      - "8010:8000"
+      - "${AI_STACK_CLASSIC_RAG_API_PORT}:8000"
     environment:
-      SUPABASE_URL: http://supabase:8000
-      SUPABASE_SERVICE_ROLE_KEY: ${AI_STACK_SUPABASE_SERVICE_ROLE_KEY}
-      QDRANT_URL: http://qdrant:6333
-      QDRANT_COLLECTION: documents
-      LLM_API_BASE: http://localai:8080/v1
+      # LLM backend (LM Studio or LocalAI)
+      RAG_LLM_BASE_URL: ${AI_STACK_LMSTUDIO_URL}
 
+      # Vector DB
+      RAG_QDRANT_URL: ${AI_STACK_QDRANT_URL}
+
+      # Langfuse observability
+      LANGFUSE_PUBLIC_KEY: ${AI_STACK_LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${AI_STACK_LANGFUSE_SECRET_KEY}
+      LANGFUSE_HOST: ${AI_STACK_LANGFUSE_URL}
+
+      # API settings
+      RAG_API_HOST: 0.0.0.0
+      RAG_API_PORT: 8000
+
+    volumes:
+      - ${AI_STACK_CLASSIC_RAG_DATA_PATH}:/app/data
+
+  # ============================================================
+  # GraphRAG API
+  # ------------------------------------------------------------
+  # Graph-based Retrieval-Augmented Generation service.
+  #
+  # Purpose:
+  # - Entity extraction
+  # - Relationship extraction
+  # - Graph construction and updates
+  # - Cypher-based retrieval
+  # - LLM reasoning over graph structures
+  #
+  # Networking:
+  # - Backend-only (not exposed to LAN)
+  #
+  # Storage:
+  # - GraphRAG config, logs, and ingestion data stored under:
+  #     ${AI_STACK_GRAPHRAG_DATA_PATH}
+  # ============================================================
   graphrag-api:
-    build: ./graphrag_api
+    image: ghcr.io/your-org/graphrag-api:latest
     container_name: ai-stack-graphrag-api
     restart: unless-stopped
     networks:
-      backend:
+      backend: {}
     ports:
-      - "8011:8000"
+      - "${AI_STACK_GRAPHRAG_API_PORT}:8001"
     environment:
-      NEO4J_URI: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: ${AI_STACK_NEO4J_PASSWORD}
-      QDRANT_URL: http://qdrant:6333
-      QDRANT_COLLECTION: graph_nodes
-      LLM_API_BASE: http://localai:8080/v1
+      # LLM backend
+      GRAPHRAG_LLM_BASE_URL: ${AI_STACK_LMSTUDIO_URL}
 
+      # Graph DB
+      GRAPHRAG_NEO4J_URI: ${AI_STACK_NEO4J_URI}
+      GRAPHRAG_NEO4J_USERNAME: neo4j
+      GRAPHRAG_NEO4J_PASSWORD: ${AI_STACK_NEO4J_PASSWORD}
+
+      # Langfuse observability
+      LANGFUSE_PUBLIC_KEY: ${AI_STACK_LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${AI_STACK_LANGFUSE_SECRET_KEY}
+      LANGFUSE_HOST: ${AI_STACK_LANGFUSE_URL}
+
+      # API settings
+      GRAPHRAG_API_HOST: 0.0.0.0
+      GRAPHRAG_API_PORT: 8001
+
+    volumes:
+      - ${AI_STACK_GRAPHRAG_DATA_PATH}:/app/data
+
+# ============================================================
+# Networks
+# ------------------------------------------------------------
+# frontend:
+#   - macvlan network for GUI-exposed services
+#   - static IPs assigned via env vars
+#
+# backend:
+#   - ipvlan network for internal service-to-service traffic
+#   - default network for all services unless otherwise specified
+# ============================================================
 networks:
-  backend:
-    external: true
   frontend:
     external: true
+    name: frontend
+
+  backend:
+    external: true
+    name: backend
