@@ -494,9 +494,7 @@ services:
   #     ${AI_STACK_CLASSIC_RAG_DATA_PATH}
   # ============================================================
   classic-rag-api:
-    build:
-      context: ./classic_rag_api
-      dockerfile: Dockerfile
+    image: ghcr.io/LC19k/classic-rag-api:latest
     image: classic-rag-api:local
     container_name: ai-stack-classic-rag-api
     restart: unless-stopped
@@ -535,10 +533,7 @@ services:
   #     ${AI_STACK_GRAPHRAG_DATA_PATH}
   # ============================================================
   graphrag-api:
-    build:
-      context: ./graphrag_api
-      dockerfile: Dockerfile
-    image: graphrag-api:local
+    image: ghcr.io/LC19k/graphrag-api:latest
     container_name: ai-stack-graphrag-api
     restart: unless-stopped
     networks:
