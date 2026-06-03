@@ -1,0 +1,38 @@
+name: Build RAG APIs
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Classic RAG API
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/classic-rag-api:latest ./classic_rag_api
+
+      - name: Build GraphRAG API
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/graphrag-api:latest ./graphrag_api
+
+      - name: Push images
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/classic-rag-api:latest
+          docker push ghcr.io/${{ github.repository_owner }}/graphrag-api:latest
