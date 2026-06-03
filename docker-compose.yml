@@ -494,7 +494,7 @@ services:
   #     ${AI_STACK_CLASSIC_RAG_DATA_PATH}
   # ============================================================
   classic-rag-api:
-    image: ghcr.io/LC19k/classic-rag-api:latest
+    image: ghcr.io/lc19k/classic-rag-api:latest
     image: classic-rag-api:local
     container_name: ai-stack-classic-rag-api
     restart: unless-stopped
@@ -533,7 +533,7 @@ services:
   #     ${AI_STACK_GRAPHRAG_DATA_PATH}
   # ============================================================
   graphrag-api:
-    image: ghcr.io/LC19k/graphrag-api:latest
+    image: ghcr.io/lc19k/graphrag-api:latest
     container_name: ai-stack-graphrag-api
     restart: unless-stopped
     networks:
