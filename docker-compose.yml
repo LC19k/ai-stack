@@ -495,7 +495,6 @@ services:
   # ============================================================
   classic-rag-api:
     image: ghcr.io/lc19k/classic-rag-api:latest
-    image: classic-rag-api:local
     container_name: ai-stack-classic-rag-api
     restart: unless-stopped
     networks:
