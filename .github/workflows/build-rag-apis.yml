@@ -26,13 +26,13 @@ jobs:
 
       - name: Build Classic RAG API
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/classic-rag-api:latest ./classic_rag_api
+          docker build -t ghcr.io/lc19k/classic-rag-api:latest ./classic_rag_api
 
       - name: Build GraphRAG API
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/graphrag-api:latest ./graphrag_api
+          docker build -t ghcr.io/lc19k/graphrag-api:latest ./graphrag_api
 
       - name: Push images
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/classic-rag-api:latest
-          docker push ghcr.io/${{ github.repository_owner }}/graphrag-api:latest
+          docker push ghcr.io/lc19k/classic-rag-api:latest
+          docker push ghcr.io/lc19k/graphrag-api:latest
