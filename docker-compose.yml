@@ -300,7 +300,7 @@ services:
     environment:
       POSTGRES_PASSWORD: ${AI_STACK_SUPABASE_POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
-      POSTGRES_USER: supabase_admin
+      POSTGRES_USER: postgres
     volumes:
       - ${AI_STACK_SUPABASE_POSTGRES_DATA_PATH}:/var/lib/postgresql/data
     healthcheck:
@@ -335,7 +335,7 @@ services:
       - supabase-postgres
     environment:
       GOTRUE_DB_DRIVER: postgres
-      DATABASE_URL: postgres://supabase_admin:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
+      DATABASE_URL: postgres://postgres:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
       GOTRUE_JWT_SECRET: ${AI_STACK_SUPABASE_JWT_SECRET}
       GOTRUE_SITE_URL: ${AI_STACK_SUPABASE_SITE_URL}
       GOTRUE_API_HOST: 0.0.0.0
@@ -363,7 +363,7 @@ services:
     depends_on:
       - supabase-postgres
     environment:
-      PGRST_DB_URI: postgres://supabase_admin:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
+      PGRST_DB_URI: postgres://postgres:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${AI_STACK_SUPABASE_JWT_SECRET}
 
@@ -426,7 +426,7 @@ services:
       ANON_KEY: ${AI_STACK_SUPABASE_ANON_KEY}
       SERVICE_KEY: ${AI_STACK_SUPABASE_SERVICE_ROLE_KEY}
       POSTGRES_PASSWORD: ${AI_STACK_SUPABASE_POSTGRES_PASSWORD}
-      DATABASE_URL: postgres://supabase_admin:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
+      DATABASE_URL: postgres://postgres:${AI_STACK_SUPABASE_POSTGRES_PASSWORD}@supabase-postgres:5432/postgres
     volumes:
       - ${AI_STACK_SUPABASE_STORAGE_DATA_PATH}:/var/lib/storage
 
